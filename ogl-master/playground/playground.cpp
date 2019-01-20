@@ -20,17 +20,43 @@ using namespace std;
 
 #include <common/shader.hpp>
 
-size_t numSphereFloats(int resolution) {
+size_t numSphereVertices(int resolution) {
     int n = resolution * 4;
     int numLayers = ((n-2)/2) + 2;
-    size_t numVertices = n * numLayers;
-    return numVertices * 3;
+    //size_t numVertices = n * numLayers;
+    size_t numTriangles = (n * (numLayers-2) * 2) + 2;
+    return numTriangles * 3;
 }
 
-float* getSphereVertices(int resolution, float radius) {
+void getTrianglesFromVertices(vector<vector<vec4> > &levels, vec3 vertices[]) {
+    int numLevels = levels.size();
+    int n = levels[0].size();
+    int index = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < numLevels - 1; j++) {
+            // Add top triangle
+            if (j > 0) {
+                vertices[index] = vec3(levels[j][i]);
+                vertices[index + 1] = vec3(levels[j][(i + 1) % n]);
+                vertices[index + 2] = vec3(levels[j + 1][(i + 1) % n]);
+                index += 3;
+            }
+            // Add bottom triangle
+            if (j < numLevels - 2) {
+                vertices[index] = vec3(levels[j][i]);
+                vertices[index + 1] = vec3(levels[j + 1][i]);
+                vertices[index + 2] = vec3(levels[j + 1][(i + 1) % n]);
+                index += 3;
+            }
+        }
+    }
+}
+
+vec3* getSphereVertices(int resolution, float radius) {
     int n = resolution * 4;
     int numLayers = ((n-2)/2) + 2;
     size_t numVertices = n * numLayers;
+    size_t numTriangles = (n * (numLayers-2) * 2) + 2;
 
     float yAngle = glm::radians(360 / ((float)n));
     float interiorAngle = ((float)(n - 2) * 180 / (float)n);
@@ -44,17 +70,18 @@ float* getSphereVertices(int resolution, float radius) {
     vector<vec4> topLevel(n, basePoint);
     levels.push_back(topLevel);
 
-    size_t numFloats = numSphereFloats(n);
-    float* vertices = new float[numFloats];
+    //size_t numVertices = n * numLayers;
+    vec3* vertices = new vec3[numTriangles * 3];
 
     // Initialize beginning
-    vertices[0] = basePoint.x;
-    vertices[1] = basePoint.y;
-    vertices[2] = basePoint.z;
+    //vertices[0] = basePoint.x;
+    //vertices[1] = basePoint.y;
+    //vertices[2] = basePoint.z;
+    //vertices[0] = vec3(basePoint.x, basePoint.y, basePoint.z);
 
-    cout << "(" << vertices[0] << ", " << vertices[1] << ", " << vertices[2] << ")" << endl;
+    cout << "(" << vertices[0].x << ", " << vertices[0].y << ", " << vertices[0].z << ")" << endl;
 
-    int index = 3;
+    //int index = 1;
     mat4 xrotationMat = glm::rotate(mat4(), xAngle, vec3(1.0f, 0.0f, 0.0f));
     mat4 yrotationMat = glm::rotate(mat4(), yAngle, vec3(0.0f, 1.0f, 0.0f));
     //cout << "yangle: " << yAngle << endl;
@@ -79,15 +106,20 @@ float* getSphereVertices(int resolution, float radius) {
             mat4 translateMat = glm::translate(mat4(), vec3(edge.x, edge.y, edge.z));
             vec4 newPoint = translateMat * point;
             newLevel.push_back(newPoint);
-            vertices[index] = newPoint.x;
-            vertices[index + 1] = newPoint.y;
-            vertices[index + 2] = newPoint.z;
-            cout << "(" << vertices[index] << ", " << vertices[index + 1] << ", " << vertices[index + 2] << ")" << endl;
-            index += 3;
+            //vertices[index] = newPoint.x;
+            //vertices[index + 1] = newPoint.y;
+            //vertices[index + 2] = newPoint.z;
+            //vertices[index] = vec3(newPoint.x, newPoint.y, newPoint.z);
+            //index += 1;
+            //cout << "(" << vertices[index] << ", " << vertices[index + 1] << ", " << vertices[index + 2] << ")" << endl;
+            //index += 3;
             edge = yrotationMat * edge;
         }
         levels.push_back(newLevel);
     }
+
+    // Create the triangles
+    getTrianglesFromVertices(levels, vertices);
     return vertices;
 }
 
@@ -160,55 +192,8 @@ int main( void )
 	// Our ModelViewProjection : multiplication of our 3 matrices
 	glm::mat4 MVP        = Projection * View * Model; // Remember, matrix multiplication is the other way around
 
-    size_t size = numSphereFloats(70);
-    float* g_vertex_buffer_data = getSphereVertices(70, 1);
-    //size_t size = 3 * 2;
-//	static const GLfloat g_vertex_buffer_data[] = { 
-//		-1.0f,-1.0f,-1.0f,
-//		-1.0f,-1.0f, 1.0f,
-//		-1.0f, 1.0f, 1.0f,
-//    };
-//	// Our vertices. Tree consecutive floats give a 3D vertex; Three consecutive vertices give a triangle.
-//	// A cube has 6 faces with 2 triangles each, so this makes 6*2=12 triangles, and 12*3 vertices
-//	static const GLfloat g_vertex_buffer_data[] = { 
-//		-1.0f,-1.0f,-1.0f,
-//		-1.0f,-1.0f, 1.0f,
-//		-1.0f, 1.0f, 1.0f,
-//		 1.0f, 1.0f,-1.0f,
-//		-1.0f,-1.0f,-1.0f,
-//		-1.0f, 1.0f,-1.0f,
-//		 1.0f,-1.0f, 1.0f,
-//		-1.0f,-1.0f,-1.0f,
-//		 1.0f,-1.0f,-1.0f,
-//		 1.0f, 1.0f,-1.0f,
-//		 1.0f,-1.0f,-1.0f,
-//		-1.0f,-1.0f,-1.0f,
-//		-1.0f,-1.0f,-1.0f,
-//		-1.0f, 1.0f, 1.0f,
-//		-1.0f, 1.0f,-1.0f,
-//		 1.0f,-1.0f, 1.0f,
-//		-1.0f,-1.0f, 1.0f,
-//		-1.0f,-1.0f,-1.0f,
-//		-1.0f, 1.0f, 1.0f,
-//		-1.0f,-1.0f, 1.0f,
-//		 1.0f,-1.0f, 1.0f,
-//		 1.0f, 1.0f, 1.0f,
-//		 1.0f,-1.0f,-1.0f,
-//		 1.0f, 1.0f,-1.0f,
-//		 1.0f,-1.0f,-1.0f,
-//		 1.0f, 1.0f, 1.0f,
-//		 1.0f,-1.0f, 1.0f,
-//		 1.0f, 1.0f, 1.0f,
-//		 1.0f, 1.0f,-1.0f,
-//		-1.0f, 1.0f,-1.0f,
-//		 1.0f, 1.0f, 1.0f,
-//		-1.0f, 1.0f,-1.0f,
-//		-1.0f, 1.0f, 1.0f,
-//		 1.0f, 1.0f, 1.0f,
-//		-1.0f, 1.0f, 1.0f,
-//		 1.0f,-1.0f, 1.0f
-//	};
-
+    size_t size = numSphereVertices(5);
+    vec3* g_vertex_buffer_data = getSphereVertices(5, 1);
 //	// One color for each vertex. They were generated randomly.
 //	static const GLfloat g_color_buffer_data[] = { 
 //		0.583f,  0.771f,  0.014f,
@@ -253,7 +238,7 @@ int main( void )
 	glGenBuffers(1, &vertexbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 //	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
-	glBufferData(GL_ARRAY_BUFFER, size*sizeof(float), g_vertex_buffer_data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, size*sizeof(vec3), g_vertex_buffer_data, GL_STATIC_DRAW);
 //
 //	GLuint colorbuffer;
 //	glGenBuffers(1, &colorbuffer);
@@ -297,8 +282,8 @@ int main( void )
 //		);
 
 		// Draw the triangle !
-        glPointSize(2);
-		glDrawArrays(GL_POINTS, 0, size/3); // 12*3 indices starting at 0 -> 12 triangles
+        glPointSize(5);
+		glDrawArrays(GL_LINES, 0, size); // 12*3 indices starting at 0 -> 12 triangles
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
